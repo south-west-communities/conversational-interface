@@ -1,5 +1,3 @@
-// https://github.com/dialogflow/dialogflow-fulfillment-nodejs
-// https://github.com/dialogflow/dialogflow-fulfillment-nodejs/tree/master/samples/actions-on-google
 'use strict';
 
 const functions = require('firebase-functions');
@@ -17,15 +15,19 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   const agent = new WebhookClient({request, response});
 
   function nextEventHandler(agent) {
-    let errorMsg = 'The next event is next wednesday';
-    agent.add('In the function.');
+    agent.add('Let me have a look.');
 
-    return callEventApi('14338472').then((output) => {
+    // get the community ID needed for the api
+    const orgName = agent.parameters.community.toLowerCase();
+    const orgId = communities[orgName];
+
+    // retrun to prevent the function exiting before promises resolve
+    return callEventApi(orgId, orgName).then((output) => {
       console.log('Success:', output);
       agent.add(output);
     }).catch((error) => {
       console.error('Error:', error);
-      agent.add(errorMsg + '. ' + error);
+      agent.add('ERROR in next event handler: ', error);
     });
   }
 
@@ -35,7 +37,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   agent.handleRequest(intentMap);
 });
 
-function callEventApi(orgId){
+function callEventApi(orgId, orgName){
   return new Promise((resolve, reject) => {
     let path = `${baseApiUrl}/${nextEventPath}/${orgId}`;
     console.log('API Request: ', path);
@@ -47,8 +49,8 @@ function callEventApi(orgId){
         let response = JSON.parse(body);
         console.log('RESPONSE: ', response);
 
-        let community = orgId;
-        let output = `The next ${community} event is on Wednesday. Fullfilment`;
+        let date = new Date();
+        let output = `The next ${orgName} event is on ${humanDate(date)}.`;
 
         console.log(output);
         resolve(output);
@@ -60,3 +62,28 @@ function callEventApi(orgId){
     });
   });
 }
+
+function humanDate(originalDate){
+
+  const date = new Date(originalDate);
+  const monthNames = [
+    'January', 'February', 'March',
+    'April', 'May', 'June', 'July',
+    'August', 'September', 'October',
+    'November', 'December'
+  ];
+
+  const day = date.getDate();
+  const monthIndex = date.getMonth();
+  const dayName = date.toLocaleDateString('en-UK', { weekday: 'long' });
+
+  return `${dayName} the ${addOrdinal(date)} ${monthNames[monthIndex]}`;
+}
+
+function addOrdinal(dt) {
+  return dt.getDate()+(dt.getDate() % 10 === 1 && dt.getDate() !== 11 ? 'st' : (dt.getDate() % 10 === 2 && dt.getDate() !== 12 ? 'nd' : (dt.getDate() % 10 === 3 && dt.getDate() !== 13 ? 'rd' : 'th')));
+}
+
+const communities = {
+  'plymouth web': '14338472'
+};
