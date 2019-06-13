@@ -85,5 +85,30 @@ function addOrdinal(dt) {
 }
 
 const communities = {
-  'plymouth web': '14338472'
+  'plymouth web': '14338472',
+  'kernow dat': '054497961539388',
+  'cornwall geeks': '218412503144680',
+  'software cornwall': '141228100812756',
+  'cornwall tech jam': '271956584376238',
+  'thinqtanq': '6377821409',
+  'cornwall digital meetup': '1704124',
+  'tech exeter': '1767306',
+  'digital plymouth': '8225401568',
+  'mesh': '11380604458',
+  'future sync': '18225508719',
+  'women in stem plymouth': '7944478778',
+  'plymouth js': '16812344332',
+  'digital exeter': '18581363',
+  'sql south west': '21740803',
+  'producttank exeter': '30492033',
+  'digital taunton': '27349249',
+  'exeter python': '20805314',
+  'cornwall .net developers': '23670110',
+  'data science cornwall': '29193006',
+  'coderdojo cornwall': '29331508',
+  'wordpress exeter': '20234010',
+  'plymouth data meetup': '28243974',
+  'algorithmic art': '22392802',
+  'yena plymouth': '26687133',
+  'prism exeter': '17763342041'
 };
