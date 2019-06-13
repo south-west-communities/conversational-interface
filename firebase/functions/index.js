@@ -33,7 +33,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         agent.add(output);
         agent.add(eventCard(evnt, output));
       } else {
-        agent.add(`I didn't catch that. Can you say the community name again?`);
+        agent.add(`It doesn't look like we have an event listed for them.`);
+        agent.add(`I can look for another community, tell you the next event in
+          our calendar or exit.`);
       }
 
 
@@ -129,9 +131,12 @@ function generateURL(evt) {
 function nextEventResponse(evnt, orgName){
   if (orgName === null){
     return `The next event in the calendar is by ${evnt.organiserName} and is on
-            ${humanDate(new Date(evnt.start))}. It's called ${evnt.title}`;
+            ${humanDate(new Date(evnt.start))}. It's called ${evnt.title}
+            and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
   } else {
-    return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}.`;
+    return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}.
+            It's called ${evnt.title} and is hosted at ${evnt.venue} in
+            ${evnt.geographic}.`;
   }
 }
 
@@ -139,12 +144,8 @@ function humanDate(originalDate){
 
   const date = new Date(originalDate);
   const dayName = date.toLocaleDateString('en-UK', { weekday: 'long' });
-  const monthNames = [
-    'January', 'February', 'March',
-    'April', 'May', 'June', 'July',
-    'August', 'September', 'October',
-    'November', 'December'
-  ];
+  const monthNames = [ 'January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December' ];
 
   return `${dayName} the ${addOrdinal(date)} ${monthNames[date.getMonth()]}`;
 }
