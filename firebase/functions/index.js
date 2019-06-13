@@ -34,13 +34,10 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         agent.add(eventCard(evnt, output));
       } else {
         agent.add(`It doesn't look like we have an event listed for them.`);
-        agent.add(`I can look for another community, tell you the next event in
-          our calendar or exit.`);
       }
+      agent.add(`I can look for another community, tell you the next event in
+          our calendar or exit.`);
 
-
-      // TODO: Ask followup question
-      // Further information / Another community / exit
     }).catch((error) => {
       console.error('Error:', error);
       agent.add('ERROR in next event handler: ', error);
@@ -59,20 +56,24 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
       } else {
         agent.add(`Hmmm. I didn't get anything back from the server.`);
       }
+      agent.add(`I can look for another community, tell you the next event in
+          our calendar or exit.`);
 
-
-      // TODO: Ask followup question
-      // Further information / Another community / exit ???
     }).catch((error) => {
       console.error('Error:', error);
       agent.add('ERROR in next event handler: ', error);
     });
   }
 
+  function specificCommunityHandler(agent) {
+    agent.add(`Brilliant. Which community are you interested in?`);
+  }
+
   // match function handler to the intent name
   let intentMap = new Map();
   intentMap.set('NextEvent', nextEventHandler);
   intentMap.set('NextCalendarEvent', nextCalendarEventHandler);
+  intentMap.set('SpecificCommunity', specificCommunityHandler);
   agent.handleRequest(intentMap);
 });
 
