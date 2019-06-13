@@ -9,6 +9,7 @@ const https = require('https');
 // API Endpoints
 const baseApiUrl = 'https://competent-kalam-703497.netlify.com';
 const nextEventPath = '.netlify/functions/server/api/v1/nextEventByOrganiser';
+const nextCalendarEventPath = '.netlify/functions/server/api/v1/NextEvent';
 
 process.env.DEBUG = 'dialogflow:debug'; // enables lib debugging statements
 
@@ -44,7 +45,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
     });
   }
 
-  function nextCalendarEvent(agent) {
+  function nextCalendarEventHandler(agent) {
     return callEventApi(null).then((evnt) => {
 
       if (typeof evnt !== 'undefined') {
@@ -54,12 +55,12 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         agent.add(output);
         agent.add(eventCard(evnt, output));
       } else {
-        agent.add(`I didn't catch that. Can you say the community name again?`);
+        agent.add(`Hmmm. I didn't get anything back from the server.`);
       }
 
 
       // TODO: Ask followup question
-      // Further information / Another community / exit
+      // Further information / Another community / exit ???
     }).catch((error) => {
       console.error('Error:', error);
       agent.add('ERROR in next event handler: ', error);
@@ -69,6 +70,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   // match function handler to the intent name
   let intentMap = new Map();
   intentMap.set('NextEvent', nextEventHandler);
+  intentMap.set('NextCalendarEvent', nextCalendarEventHandler);
   agent.handleRequest(intentMap);
 });
 
@@ -76,7 +78,7 @@ function callEventApi(orgId){
   return new Promise((resolve, reject) => {
     let path = ``;
     if (orgId === null){
-      path = `${baseApiUrl}/${nextEventPath}/${orgId}`;
+      path = `${baseApiUrl}/${nextCalendarEventPath}`;
     } else {
       path = `${baseApiUrl}/${nextEventPath}/${orgId}`;
     }
@@ -124,11 +126,12 @@ function generateURL(evt) {
   return `https://southwestcommunities.co.uk/events/${fileTitle}`;
 }
 
-function nextEventResponse(event, orgName){
+function nextEventResponse(evnt, orgName){
   if (orgName === null){
-    return `The next ${orgName} event is on ${humanDate(new Date(event.start))}.`;
+    return `The next event in the calendar is by ${evnt.organiserName} and is on
+            ${humanDate(new Date(evnt.start))}. It's called ${evnt.title}`;
   } else {
-    return `The next ${orgName} event is on ${humanDate(new Date(event.start))}.`;
+    return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}.`;
   }
 }
 
