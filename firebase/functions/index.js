@@ -137,9 +137,11 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         agent.add('ERROR in the by organiser and date handler: ', error);
       });
     } else if (org) {
-      agent.add(`I picked up a community but no date. Try again.`);
+      agent.add(`I picked up a community but no date.`);
+      agent.add(happyPathResponse());
     } else {
-      agent.add(`I didn't pick up any data. Something must have gone wrong. Which community and date did you want?`);
+      agent.add(`I didn't pick up any data. Something must have gone wrong.`);
+      agent.add(happyPathResponse());
     }
   }
 
@@ -228,6 +230,16 @@ function nextEventResponse(evnt, orgName){
   } else {
     return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
   }
+}
+
+function eventsOnDateResponse(results) {
+  let utterance = `There are ${results.matches.length} events hosted by `;
+  results.forEach(( evt, i ) => {
+    utterance += i === results.matches.length - 1 ? 'and ' : '';
+    utterance += evt.organiserName;
+    utterance += i === results.matches.length - 1 ? '. ' : ', ';
+  });
+  return utterance;
 }
 
 function humanDate(originalDate){
