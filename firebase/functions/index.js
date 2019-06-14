@@ -10,6 +10,8 @@ const https = require('https');
 const baseApiUrl = 'https://competent-kalam-703497.netlify.com';
 const nextEventPath = '.netlify/functions/server/api/v1/nextEventByOrganiser';
 const nextCalendarEventPath = '.netlify/functions/server/api/v1/NextEvent';
+const aroundDatePath = '.netlify/functions/server/api/v1/aroundDate';
+const dateAndOrgPath = '.netlify/functions/server/api/v1/eventByOrganiserAndDate';
 
 process.env.DEBUG = 'dialogflow:debug'; // enables lib debugging statements
 
@@ -17,14 +19,12 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   const agent = new WebhookClient({request, response});
 
   function nextEventHandler(agent) {
-    // agent.add('Let me have a look.');
-
     // get the community ID needed for the api
     const orgName = agent.parameters.community.toLowerCase();
     const orgId = communities[orgName];
 
     // return to prevent the function exiting before promises resolve
-    return callEventApi(orgId).then((evnt) => {
+    return callEventApi('community', orgId).then((evnt) => {
 
       if (typeof evnt !== 'undefined') {
         const output = nextEventResponse(evnt, orgName);
@@ -35,8 +35,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
       } else {
         agent.add(`It doesn't look like we have an event listed for them.`);
       }
-      agent.add(`I can look for another community, tell you the next event in
-          our calendar or exit.`);
+      agent.add(happyPathResponse());
 
     }).catch((error) => {
       console.error('Error:', error);
@@ -45,7 +44,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   }
 
   function nextCalendarEventHandler(agent) {
-    return callEventApi(null).then((evnt) => {
+    return callEventApi('calendar', null).then((evnt) => {
 
       if (typeof evnt !== 'undefined') {
         const output = nextEventResponse(evnt, null);
@@ -56,13 +55,106 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
       } else {
         agent.add(`Hmmm. I didn't get anything back from the server.`);
       }
-      agent.add(`I can look for another community, tell you the next event in
-          our calendar or exit.`);
+      agent.add(happyPathResponse());
 
     }).catch((error) => {
       console.error('Error:', error);
-      agent.add('ERROR in next event handler: ', error);
+      agent.add('ERROR in next calendar event handler: ', error);
     });
+  }
+
+  function aroundDateHandler(agent) {
+    if (agent.parameters.date) {
+      return callEventApi('date', agent.parameters.date).then((results) => {
+        //results = JSON.parse(results);
+        if (results.matches.length > 0) {
+          let utterance = `There are ${results.matches.length} events hosted by `;
+          results.matches.forEach(( evt, i ) => {
+            utterance += i === results.matches.length - 1 ? 'and ' : '';
+            utterance += evt.organiserName;
+            utterance += i === results.matches.length - 1 ? '. ' : ', ';
+          });
+          agent.add(utterance);
+          agent.add('Would you like to find out more about one of them?');
+          results.matches.forEach( evt => {
+            agent.add(new Suggestion(evt.organiserName));
+          });
+        }
+
+        else if (results.near.length > 0) {
+          let utterance = `There are ${results.matches.length} events hosted by `;
+          results.near.forEach(( evt, i ) => {
+            utterance += i === results.matches.length - 1 ? 'and ' : '';
+            utterance += evt.organiserName;
+            utterance += i === results.matches.length - 1 ? '. ' : ', ';
+          });
+          agent.add(utterance);
+          agent.add('Would you like to find out more about one of them?');
+        }
+      }).catch((error) => {
+        console.error('Error:', error);
+        agent.add('ERROR in around date handler: ', error);
+      });
+    } else if (agent.parameters['date-period']) {
+      agent.add(`I picked up a date period.`);
+    } else {
+      agent.add(`I didn't pick up a date. Try again.`);
+    }
+  }
+
+  function eventByOrganiserAndDate(agent) {
+    // TODO - Figure out why agent.context.set() / get() are not working
+    let thisContext = request.body.queryResult.outputContexts[0];
+    console.log(thisContext);
+    let org = '';
+    let date = '';
+
+    // Check to see if there are values in context or agent
+    if (agent.parameters.community) {
+      org = agent.parameters.community;
+    } else {
+      org = null;
+    }
+
+    if (thisContext.parameters.date.length > 1) {
+      date = thisContext.parameters.date;
+    } else {
+      date = null;
+    }
+
+    console.log('Date: ', date);
+    console.log('Org: ', org);
+
+    if (date && org) {
+      console.log(`Getting organiser and date event.`);
+      const orgId = communities[org.toLowerCase()];
+      return callEventApi('org-date', {
+        'date': date,
+        'org': orgId
+      }).then((evnt) => {
+        if (typeof evnt !== 'undefined') {
+          const output = nextEventResponse(evnt, org);
+          console.log('Success: ', output);
+
+          agent.add(output);
+          agent.add(eventCard(evnt, output));
+
+          // maybe offer more info about the community here?
+          agent.add(happyPathResponse());
+        } else {
+          agent.add(`Hmm. I can't find that event`);
+          agent.add(happyPathResponse());
+        }
+
+      }).catch((error) => {
+        console.error('Error:', error);
+        agent.add('ERROR in the by organiser and date handler: ', error);
+      });
+    } else if (org) {
+      agent.add(`I picked up a community but no date. Try again.`);
+    } else {
+      agent.add(`I didn't pick up a date or community. Something must have gone wrong. Which community and date did you want?`);
+    }
   }
 
   function specificCommunityHandler(agent) {
@@ -74,16 +166,22 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   intentMap.set('NextEvent', nextEventHandler);
   intentMap.set('NextCalendarEvent', nextCalendarEventHandler);
   intentMap.set('SpecificCommunity', specificCommunityHandler);
+  intentMap.set('AroundDate', aroundDateHandler);
+  intentMap.set('AroundDate - MoreInfo - Yes', eventByOrganiserAndDate);
   agent.handleRequest(intentMap);
 });
 
-function callEventApi(orgId){
+function callEventApi(type, data){
   return new Promise((resolve, reject) => {
     let path = ``;
-    if (orgId === null){
+    if (type === 'calendar'){
       path = `${baseApiUrl}/${nextCalendarEventPath}`;
+    } else if (type === 'date') {
+      path = `${baseApiUrl}/${aroundDatePath}/${data}`;
+    } else if (type === 'org-date') {
+      path = `${baseApiUrl}/${dateAndOrgPath}/${data.org}/${data.date}`;
     } else {
-      path = `${baseApiUrl}/${nextEventPath}/${orgId}`;
+      path = `${baseApiUrl}/${nextEventPath}/${data}`;
     }
 
     console.log('API Request: ', path);
@@ -92,9 +190,14 @@ function callEventApi(orgId){
       let body = '';
       res.on('data', (d) => { body += d; });
       res.on('end', () => {
-        // TODO: Handle orgs with no events
+        let response;
+        try {
+          response = JSON.parse(body);
+        } catch (error) {
+          response = body;
+          console.log('ERROR: Parsing JSON');
+        }
 
-        let response = JSON.parse(body);
         console.log('RESPONSE: ', response);
         resolve(response.event);
       });
@@ -129,15 +232,15 @@ function generateURL(evt) {
   return `https://southwestcommunities.co.uk/events/${fileTitle}`;
 }
 
+function happyPathResponse(){
+  return `I can look for another community or date, tell you the next event in our calendar or exit.`;
+}
+
 function nextEventResponse(evnt, orgName){
   if (orgName === null){
-    return `The next event in the calendar is by ${evnt.organiserName} and is on
-            ${humanDate(new Date(evnt.start))}. It's called ${evnt.title}
-            and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
+    return `The next event in the calendar is by ${evnt.organiserName} and is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
   } else {
-    return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}.
-            It's called ${evnt.title} and is hosted at ${evnt.venue} in
-            ${evnt.geographic}.`;
+    return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
   }
 }
 
