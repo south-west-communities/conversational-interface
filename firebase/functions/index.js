@@ -116,7 +116,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
       org = null;
     }
 
-    if (thisContext.parameters.date.length > 1) {
+    if (thisContext.parameters.date && thisContext.parameters.date.length > 1) {
       date = thisContext.parameters.date;
     } else {
       date = null;
@@ -153,7 +153,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
     } else if (org) {
       agent.add(`I picked up a community but no date. Try again.`);
     } else {
-      agent.add(`I didn't pick up a date or community. Something must have gone wrong. Which community and date did you want?`);
+      agent.add(`I didn't pick up any data. Something must have gone wrong. Which community and date did you want?`);
     }
   }
 
