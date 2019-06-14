@@ -66,29 +66,15 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   function aroundDateHandler(agent) {
     if (agent.parameters.date) {
       return callEventApi('date', agent.parameters.date).then((results) => {
-        //results = JSON.parse(results);
+
         if (results.matches.length > 0) {
-          let utterance = `There are ${results.matches.length} events hosted by `;
-          results.matches.forEach(( evt, i ) => {
-            utterance += i === results.matches.length - 1 ? 'and ' : '';
-            utterance += evt.organiserName;
-            utterance += i === results.matches.length - 1 ? '. ' : ', ';
-          });
-          agent.add(utterance);
+          agent.add(eventsOnDateResponse(results.matches));
           agent.add('Would you like to find out more about one of them?');
           results.matches.forEach( evt => {
             agent.add(new Suggestion(evt.organiserName));
           });
-        }
-
-        else if (results.near.length > 0) {
-          let utterance = `There are ${results.matches.length} events hosted by `;
-          results.near.forEach(( evt, i ) => {
-            utterance += i === results.matches.length - 1 ? 'and ' : '';
-            utterance += evt.organiserName;
-            utterance += i === results.matches.length - 1 ? '. ' : ', ';
-          });
-          agent.add(utterance);
+        } else if (results.near.length > 0) {
+          agent.add(eventsOnDateResponse(results.near));
           agent.add('Would you like to find out more about one of them?');
         }
       }).catch((error) => {
