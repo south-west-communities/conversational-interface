@@ -319,6 +319,6 @@ const communities = {
   'plymouth data meetup': '28243974',
   'algorithmic art': '22392802',
   'yena plymouth': '26687133',
-  'prism exeter': '17763342041',
-  'plymouth design forum': '21751176839'
+  'plymouth design forum': '21751176839',
+  'prism exeter': '17763342041'
 };
