@@ -12,6 +12,7 @@ const nextEventPath = '.netlify/functions/server/api/v1/nextEventByOrganiser';
 const nextCalendarEventPath = '.netlify/functions/server/api/v1/NextEvent';
 const aroundDatePath = '.netlify/functions/server/api/v1/aroundDate';
 const dateAndOrgPath = '.netlify/functions/server/api/v1/eventByOrganiserAndDate';
+const dateRangePath = '.netlify/functions/server/api/v1/eventInDatePeriod';
 
 process.env.DEBUG = 'dialogflow:debug'; // enables lib debugging statements
 
@@ -82,7 +83,22 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         agent.add('ERROR in around date handler: ', error);
       });
     } else if (agent.parameters['date-period']) {
-      agent.add(`I picked up a date period.`);
+      return callEventApi('date-period', agent.parameters['date-period']).then((results) => {
+
+        if (results.length > 0) {
+          agent.add(eventsOnDateResponse(results));
+          agent.add('Would you like to find out more about one of them?');
+          results.forEach( evt => {
+            agent.add(new Suggestion(evt.organiserName));
+          });
+        } else {
+          agent.add(`Looks like we don't have any events in that time period.`);
+          agent.add(happyPathResponse());
+        }
+      }).catch((error) => {
+        console.error('Error:', error);
+        agent.add('ERROR in around date handler: ', error);
+      });
     } else {
       agent.add(`I didn't pick up a date. Try again.`);
     }
@@ -98,12 +114,16 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
     // Check to see if there are values in context or agent
     if (agent.parameters.community) {
       org = agent.parameters.community;
+    } else if (thisContext.parameters.community && thisContext.parameters.community.length > 1){
+      org = thisContext.parameters.community;
     } else {
       org = null;
     }
 
     if (thisContext.parameters.date && thisContext.parameters.date.length > 1) {
       date = thisContext.parameters.date;
+    } else if (thisContext.parameters['date-period'].startDate && thisContext.parameters['date-period'].startDate.length > 1){
+      date = thisContext.parameters['date-period'].startDate;
     } else {
       date = null;
     }
@@ -119,7 +139,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         'org': orgId
       }).then((evnt) => {
         if (typeof evnt !== 'undefined') {
-          const output = nextEventResponse(evnt, org);
+          const output = nextEventByOrgAndDate(evnt);
           console.log('Success: ', output);
 
           agent.add(output);
@@ -139,6 +159,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
     } else if (org) {
       agent.add(`I picked up a community but no date.`);
       agent.add(happyPathResponse());
+    } else if (date) {
+      agent.add(`How did I know you'd say that?!?`);
+      agent.add(`Which community would you like the event for?`);
     } else {
       agent.add(`I didn't pick up any data. Something must have gone wrong.`);
       agent.add(happyPathResponse());
@@ -168,6 +191,8 @@ function callEventApi(type, data){
       path = `${baseApiUrl}/${aroundDatePath}/${data}`;
     } else if (type === 'org-date') {
       path = `${baseApiUrl}/${dateAndOrgPath}/${data.org}/${data.date}`;
+    } else if (type  === 'date-period'){
+      path = `${baseApiUrl}/${dateRangePath}/${data.startDate}/${data.endDate}`;
     } else {
       path = `${baseApiUrl}/${nextEventPath}/${data}`;
     }
@@ -232,12 +257,23 @@ function nextEventResponse(evnt, orgName){
   }
 }
 
+function nextEventByOrgAndDate(evnt){
+  return `The ${evnt.organiserName} on ${humanDate(new Date(evnt.start))} is called ${evnt.title}. It'll be hosted at ${evnt.venue} in ${evnt.geographic}.`;
+}
+
 function eventsOnDateResponse(results) {
-  let utterance = `There are ${results.matches.length} events hosted by `;
-  results.forEach(( evt, i ) => {
-    utterance += i === results.matches.length - 1 ? 'and ' : '';
-    utterance += evt.organiserName;
-    utterance += i === results.matches.length - 1 ? '. ' : ', ';
+  let events = results.matches ? results.matches: results;
+  let utterance = `There are ${results.length} events hosted by `;
+  let names = [];
+  events.forEach(evt => {
+    names.push(evt.organiserName);
+  });
+  names = [...new Set(names)];
+
+  names.forEach(( name, i ) => {
+    utterance += i === names.length - 1 ? 'and ' : '';
+    utterance += name;
+    utterance += i === names.length - 1 ? '. ' : ', ';
   });
   return utterance;
 }
@@ -283,5 +319,6 @@ const communities = {
   'plymouth data meetup': '28243974',
   'algorithmic art': '22392802',
   'yena plymouth': '26687133',
-  'prism exeter': '17763342041'
+  'prism exeter': '17763342041',
+  'plymouth design forum': '21751176839'
 };
