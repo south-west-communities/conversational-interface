@@ -184,19 +184,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
 
 function callEventApi(type, data){
   return new Promise((resolve, reject) => {
-    let path = ``;
-    if (type === 'calendar'){
-      path = `${baseApiUrl}/${nextCalendarEventPath}`;
-    } else if (type === 'date') {
-      path = `${baseApiUrl}/${aroundDatePath}/${data}`;
-    } else if (type === 'org-date') {
-      path = `${baseApiUrl}/${dateAndOrgPath}/${data.org}/${data.date}`;
-    } else if (type  === 'date-period'){
-      path = `${baseApiUrl}/${dateRangePath}/${data.startDate}/${data.endDate}`;
-    } else {
-      path = `${baseApiUrl}/${nextEventPath}/${data}`;
-    }
-
+    let path = generatePath(type, data);
     console.log('API Request: ', path);
 
     https.get(path, res => {
@@ -230,6 +218,20 @@ function eventCard(evnt, output) {
     buttonText: `More Info`,
     buttonUrl: generateURL(evnt)
   });
+}
+
+function generatePath(type, data) {
+  if (type === 'calendar'){
+    return `${baseApiUrl}/${nextCalendarEventPath}`;
+  } else if (type === 'date') {
+    return `${baseApiUrl}/${aroundDatePath}/${data}`;
+  } else if (type === 'org-date') {
+    return `${baseApiUrl}/${dateAndOrgPath}/${data.org}/${data.date}`;
+  } else if (type  === 'date-period'){
+    return `${baseApiUrl}/${dateRangePath}/${data.startDate}/${data.endDate}`;
+  } else {
+    return `${baseApiUrl}/${nextEventPath}/${data}`;
+  }
 }
 
 function generateURL(evt) {
