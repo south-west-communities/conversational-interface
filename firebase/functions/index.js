@@ -88,8 +88,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
         if (results.length > 0) {
           agent.add(eventsOnDateResponse(results));
           agent.add('Would you like to find out more about one of them?');
-          results.forEach( evt => {
-            agent.add(new Suggestion(evt.organiserName));
+          let names = extractUniqueNames(results);
+          names.forEach( name => {
+            agent.add(new Suggestion(name));
           });
         } else {
           agent.add(`Looks like we don't have any events in that time period.`);
@@ -104,7 +105,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
     }
   }
 
-  function eventByOrganiserAndDate(agent) {
+  function eventByOrganiserAndDateHandler(agent) {
     // TODO - Figure out why agent.context.set() / get() are not working
     let thisContext = request.body.queryResult.outputContexts[0];
     console.log(thisContext);
@@ -168,17 +169,22 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
     }
   }
 
-  function specificCommunityHandler(agent) {
-    agent.add(`Brilliant. Which community are you interested in?`);
+  // Complete Community info handler. Requires some refactoring of supporting apps.
+  function communityInfoHandler(agent) {
+    agent.add(`The folks at ${agent.parameters.community} are awesome!`);
   }
+
+  // TODO: Add events in specific location intent.
+  // Requires adding of date to models throught the app chain.
+
 
   // match function handler to the intent name
   let intentMap = new Map();
   intentMap.set('NextEvent', nextEventHandler);
   intentMap.set('NextCalendarEvent', nextCalendarEventHandler);
-  intentMap.set('SpecificCommunity', specificCommunityHandler);
   intentMap.set('AroundDate', aroundDateHandler);
-  intentMap.set('AroundDate - MoreInfo - Yes', eventByOrganiserAndDate);
+  intentMap.set('AroundDate - MoreInfo - Yes', eventByOrganiserAndDateHandler);
+  intentMap.set('MoreAboutCommunity', communityInfoHandler);
   agent.handleRequest(intentMap);
 });
 
@@ -247,30 +253,23 @@ function generateURL(evt) {
   return `https://southwestcommunities.co.uk/events/${fileTitle}`;
 }
 
-function happyPathResponse(){
-  return `I can look for another community or date, tell you the next event in our calendar or exit.`;
-}
-
-function nextEventResponse(evnt, orgName){
-  if (orgName === null){
-    return `The next event in the calendar is by ${evnt.organiserName} and is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
-  } else {
-    return `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`;
-  }
-}
-
 function nextEventByOrgAndDate(evnt){
   return `The ${evnt.organiserName} on ${humanDate(new Date(evnt.start))} is called ${evnt.title}. It'll be hosted at ${evnt.venue} in ${evnt.geographic}.`;
 }
 
-function eventsOnDateResponse(results) {
-  let events = results.matches ? results.matches: results;
-  let utterance = `There are ${results.length} events hosted by `;
+function extractUniqueNames(results) {
+  results = results.matches ? results.matches: results;
   let names = [];
-  events.forEach(evt => {
+  results.forEach(evt => {
     names.push(evt.organiserName);
   });
-  names = [...new Set(names)];
+  return [...new Set(names)];
+}
+
+function eventsOnDateResponse(results) {
+  let names = extractUniqueNames(results);
+  results = results.matches ? results.matches: results;
+  let utterance = `There are ${results.length} events hosted by `;
 
   names.forEach(( name, i ) => {
     utterance += i === names.length - 1 ? 'and ' : '';
@@ -278,6 +277,35 @@ function eventsOnDateResponse(results) {
     utterance += i === names.length - 1 ? '. ' : ', ';
   });
   return utterance;
+}
+
+function happyPathResponse(){
+  const responses = [
+    `I can look for another community or date, tell you the next event in our calendar or exit.`,
+    `Can I tell you whats happening next for a community, if there is somthing on a specific date or exit.`,
+    `Would you like to know more about a specific community, the next event in our calendar or close?`,
+    `Is there a specific date or comunity you'd like to find out about, or shall I go ahead and exit?`
+  ];
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+function nextEventResponse(evnt, orgName){
+  const responses = {
+    'noOrg': [
+      `The next event in the calendar is by ${evnt.organiserName} and is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`,
+      `On the ${humanDate(new Date(evnt.start))}, ${evnt.organiserName} is hosting at event called ${evnt.title} in ${evnt.geographic}.`
+    ],
+    'orgPresent': [
+      `The next ${orgName} event is on ${humanDate(new Date(evnt.start))}. It's called ${evnt.title} and is hosted at ${evnt.venue} in ${evnt.geographic}.`,
+      `${orgName} are hosting ${evnt.title} on ${humanDate(new Date(evnt.start))}. It'll be at ${evnt.venue} in ${evnt.geographic}.`
+    ]
+  };
+
+  if (orgName === null){
+    return responses.noOrg[Math.floor(Math.random() * responses.noOrg.length)];
+  } else {
+    return responses.orgPresent[Math.floor(Math.random() * responses.orgPresent.length)];
+  }
 }
 
 function humanDate(originalDate){
