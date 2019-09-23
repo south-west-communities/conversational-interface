@@ -220,7 +220,7 @@ function eventCard(evnt, output) {
   return new Card({
     title: `${evnt.title}`,
     imageUrl: `https://southwestcommunities.co.uk/${evnt.image}`,
-    text: `${output} Discover further details via South West Communities. 💁`,
+    text: `${output} Discover further details via South West Communities.`,
     buttonText: `More Info`,
     buttonUrl: `${evnt.url}`
   });
