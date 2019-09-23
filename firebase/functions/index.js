@@ -222,7 +222,7 @@ function eventCard(evnt, output) {
     imageUrl: `https://southwestcommunities.co.uk/${evnt.image}`,
     text: `${output} Discover further details via South West Communities. 💁`,
     buttonText: `More Info`,
-    buttonUrl: generateURL(evnt)
+    buttonUrl: `${evnt.url}`
   });
 }
 
@@ -238,19 +238,6 @@ function generatePath(type, data) {
   } else {
     return `${baseApiUrl}/${nextEventPath}/${data}`;
   }
-}
-
-function generateURL(evt) {
-  let fileTitle = evt.title.toLowerCase().replace(/\s+/g, '-');
-  fileTitle = fileTitle.replace(/(\/)/g, '-');
-  fileTitle = fileTitle.replace(/(\:)/g, '-');
-  fileTitle = fileTitle.replace(/(\#)/g, '');
-  fileTitle = fileTitle.replace(/(\")/g, '');
-  fileTitle = fileTitle.replace(/(\')/g, '');
-  fileTitle += '-';
-  fileTitle += evt.id;
-
-  return `https://southwestcommunities.co.uk/events/${fileTitle}`;
 }
 
 function nextEventByOrgAndDate(evnt){
