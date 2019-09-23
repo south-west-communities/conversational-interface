@@ -322,7 +322,6 @@ function addOrdinal(dt) {
   return dt.getDate()+(dt.getDate() % 10 === 1 && dt.getDate() !== 11 ? 'st' : (dt.getDate() % 10 === 2 && dt.getDate() !== 12 ? 'nd' : (dt.getDate() % 10 === 3 && dt.getDate() !== 13 ? 'rd' : 'th')));
 }
 
-// TODO: Add all the communities
 const communities = {
   'plymouth web': '14338472',
   'kernow dat': '054497961539388',
@@ -338,7 +337,7 @@ const communities = {
   'women in stem plymouth': '7944478778',
   'plymouth js': '16812344332',
   'digital exeter': '18581363',
-  'sql south west': '21740803',
+  'data south west': '21740803',
   'producttank exeter': '30492033',
   'digital taunton': '27349249',
   'exeter python': '20805314',
@@ -350,5 +349,18 @@ const communities = {
   'algorithmic art': '22392802',
   'yena plymouth': '26687133',
   'plymouth design forum': '21751176839',
-  'prism exeter': '17763342041'
+  'prism exeter': '17763342041',
+  'coders of newton abbot': '31382334',
+  'dc 441392': '32602249',
+  'exeter amazon alexa meetup': '32164885',
+  'exeter city futures': '9802040321',
+  'exeter dot net': '19485670',
+  'exeter functional programmers': '18577020',
+  'exeter network for art and creative technology': '32593015',
+  'exeter raspberry jam': '30478960',
+  'fab lab devon': '6722521537',
+  'product tank exeter': '30492033',
+  'propeller exmouth': '30511814',
+  'south west internet of things network': '25373382021',
+  'weston tech': '27271453'
 };
