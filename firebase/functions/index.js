@@ -108,7 +108,9 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   function eventByOrganiserAndDateHandler(agent) {
     // TODO - Figure out why agent.context.set() / get() are not working
     let thisContext = request.body.queryResult.outputContexts[0];
-    console.log(thisContext);
+    let dateContext = request.body.queryResult.outputContexts[request.body.queryResult.outputContexts.length -1];
+    console.log('---ORG CONTEXT', thisContext);
+    console.log('---DATE CONTEXT', dateContext);
     let org = '';
     let date = '';
 
@@ -121,16 +123,18 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
       org = null;
     }
 
-    if (thisContext.parameters.date && thisContext.parameters.date.length > 1) {
-      date = thisContext.parameters.date;
-    } else if (thisContext.parameters['date-period'].startDate && thisContext.parameters['date-period'].startDate.length > 1){
-      date = thisContext.parameters['date-period'].startDate;
+    if (dateContext.parameters.date && dateContext.parameters.date.length > 1) {
+      date = dateContext.parameters.date;
+    } else if (dateContext.parameters['date-period'].startDate && dateContext.parameters['date-period'].startDate.length > 1){
+      date = dateContext.parameters['date-period'].startDate;
     } else {
       date = null;
     }
 
-    console.log('Date: ', date);
-    console.log('Org: ', org);
+    date = date.substring(0, date.length - 6);
+
+    console.log('---Date: ', date);
+    console.log('---Org: ', org);
 
     if (date && org) {
       console.log(`Getting organiser and date event.`);
@@ -175,7 +179,7 @@ exports.dialogflowFirebaseFulfillment = functions.https.onRequest((request, resp
   }
 
   // TODO: Add events in specific location intent.
-  // Requires adding of date to models throught the app chain.
+  // Requires adding of data to models throughout the app ecostsyem.
 
 
   // match function handler to the intent name
@@ -245,7 +249,7 @@ function nextEventByOrgAndDate(evnt){
 }
 
 function extractUniqueNames(results) {
-  results = results.matches ? results.matches: results;
+  results = results.matches ? results.matches : results;
   let names = [];
   results.forEach(evt => {
     names.push(evt.organiserName);
